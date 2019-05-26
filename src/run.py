@@ -8,40 +8,55 @@ RACE = 'h'
 ALIGNMENT = 'n'
 MAX_READ = 1000000000
 
-child = pexpect.spawn(COMMAND)
-screen = pyte.Screen(WIDTH, HEIGHT)
-stream = pyte.Stream(screen)
-index = child.expect(['Shall I pick', 'Restoring save file'])
 
-if index == 1:
-    child.sendline()
-    child.sendline('#quit')
-    child.expect('Really quit?')
-    child.send('y')
-    child.expect('Do you want your possessions identified?')
-    child.send('n')
-    child.expect('Do you want to see your attributes?')
-    child.send('n')
-    child.expect('Do you want to see your conduct?')
-    child.send('n')
-    child.expect('Do you want to see the dungeon overview?')
-    child.send('n')
-    child.expect('You quit')
-    child.sendline()
-    child = pexpect.spawn(COMMAND)
+class Game:
+    def __init__(self):
+        pass
 
-child.send('n')
-child.expect('Pick a role or profession')
-child.send(ROLE)
-child.expect('Pick a race or species')
-child.send(RACE)
-child.expect('Pick an alignment or creed')
-child.send(ALIGNMENT)
-child.expect('Is this ok?')
-child.send('y')
-child.sendline()
-text = child.read_nonblocking(size=MAX_READ)
-stream.feed(text.decode())
-for line in screen.display:
-    print(line)
+    def start(self):
+        self.child = pexpect.spawn(COMMAND)
+        self.screen = pyte.Screen(WIDTH, HEIGHT)
+        self.stream = pyte.Stream(self.screen)
 
+        index = self.child.expect(['Shall I pick', 'Restoring save file'])
+        if index == 1:
+            self.child.sendline()
+            self.quit()
+            self.child = pexpect.spawn(COMMAND)
+
+        self.child.send('n')
+        self.child.expect('Pick a role or profession')
+        self.child.send(ROLE)
+        self.child.expect('Pick a race or species')
+        self.child.send(RACE)
+        self.child.expect('Pick an alignment or creed')
+        self.child.send(ALIGNMENT)
+        self.child.expect('Is this ok?')
+        self.child.send('y')
+        self.child.sendline()
+
+    def quit(self):
+        self.child.sendline('#quit')
+        self.child.expect('Really quit?')
+        self.child.send('y')
+        self.child.expect('Do you want your possessions identified?')
+        self.child.send('n')
+        self.child.expect('Do you want to see your attributes?')
+        self.child.send('n')
+        self.child.expect('Do you want to see your conduct?')
+        self.child.send('n')
+        self.child.expect('Do you want to see the dungeon overview?')
+        self.child.send('n')
+        self.child.expect('You quit')
+        self.child.sendline()
+
+    def get_screen(self):
+        text = self.child.read_nonblocking(size=MAX_READ)
+        self.stream.feed(text.decode())
+        return self.screen.display
+
+
+if __name__ == '__main__':
+    game = Game()
+    game.start()
+    print(game.get_screen())
