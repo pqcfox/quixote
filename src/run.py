@@ -1,3 +1,4 @@
+import curses
 import re
 import time
 from enum import Enum, auto
@@ -137,29 +138,72 @@ class Game:
         return state
 
     def do_action(self, action):
-        if action in key_actions:
-            self.child.send(key_actions[action])
-        elif action in hash_actions:
-            self.child.sendline(hash_actions[action])
+        if action in self.key_actions:
+            self.child.send(self.key_actions[action])
+        elif action in self.hash_actions:
+            self.child.sendline(self.hash_actions[action])
+
+
+class Display:
+    def __init__(self, game):
+        self.game = game
+        self.running = True
+
+    def start(self):
+        self.stdscr = curses.initscr()
+        self.stdscr.nodelay(True)
+        curses.noecho()
+        curses.cbreak()
+        curses.curs_set(0)
+        self.running = True
+
+    def update(self):
+        if self.stdscr.getch() == ord('q'):
+            self.stop()
+        else:
+            game_display = game.get_screen()
+            for line, row in enumerate(game_display):
+                self.stdscr.addstr(line, 0, row)
+            self.stdscr.refresh()
+
+    def stop(self):
+        curses.nocbreak()
+        curses.echo()
+        curses.curs_set(1)
+        curses.endwin()
+        self.running = False
 
 
 class Bot:
     def __init__(self, game):
         self.game = game
 
-    def play():
-        game.start()
-        while game.running:
-            state = game.get_state()
-            action = choose_action(state)
-            game.do_action(action)
-        return game.get_state()
+    def play(self, show=False, move_delay=0.2):
+        try:
+            game.start()
+            if show:
+                display = Display(self.game)
+                display.start()
+            while game.running:
+                state = game.get_state()
+                action = self.choose_action(state)
+                game.do_action(action)
+                if show:
+                    display.update()
+                    if not display.running:
+                        break
+                    time.sleep(move_delay)  # TODO: make check against timer
+            return None  # TODO: make meaningful
+        except:
+            if show:
+                display.stop()
 
-    def choose_action(state):
+    def choose_action(self, state):
         pass
 
 
 if __name__ == '__main__':
     game = Game()
-    game.start()
-    print(game.get_state())
+    bot = Bot(game)
+    bot.play(show=True)
+
