@@ -1,4 +1,5 @@
 import curses
+import random
 import re
 import time
 from enum import Enum, auto
@@ -138,6 +139,7 @@ class Game:
         return state
 
     def do_action(self, action):
+        before = self.get_screen()
         if action in self.key_actions:
             self.child.send(self.key_actions[action])
         elif action in self.hash_actions:
@@ -178,7 +180,7 @@ class Bot:
     def __init__(self, game):
         self.game = game
 
-    def play(self, show=False, move_delay=0.2):
+    def play(self, show=False, move_delay=0.05):
         try:
             game.start()
             if show:
@@ -188,22 +190,29 @@ class Bot:
                 state = game.get_state()
                 action = self.choose_action(state)
                 game.do_action(action)
+
                 if show:
                     display.update()
                     if not display.running:
                         break
                     time.sleep(move_delay)  # TODO: make check against timer
             return None  # TODO: make meaningful
-        except:
+        except Exception as e:
             if show:
                 display.stop()
+            raise e
 
     def choose_action(self, state):
         pass
 
 
+class RandomBot(Bot):
+    def choose_action(self, state):
+        act = random.choice([act for act in self.game.Action])
+        return act
+
+
 if __name__ == '__main__':
     game = Game()
-    bot = Bot(game)
+    bot = RandomBot(game)
     bot.play(show=True)
-
