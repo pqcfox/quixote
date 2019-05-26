@@ -84,11 +84,9 @@ class Game:
             self.child.sendline()
             self.quit()
             self.child = pexpect.spawn(COMMAND)
-            self.wait_for_text('Is this okay?')
+            self.wait_for_text('Is this ok?')
 
         self.child.send('y')
-        self.wait_for_text('--More--')
-        self.child.sendline()
         self.child.sendcontrol('r')  # redraw so we can grab the map
         self.running = True
 
@@ -106,9 +104,6 @@ class Game:
             start_time = time.time()
         while True:
             display = self.get_screen()
-            for line in display:
-                print(line)
-            print('-----')
             for index, text in enumerate(texts):
                 if any([text in line for line in display]):
                     return index
@@ -116,15 +111,15 @@ class Game:
                 raise TimeoutError('Timeout waiting for query')
 
     def complete_game(self):
-        self.child.interact()
         while True:
             self.child.send('n')
             try:
-                self.wait_for_text('Do you want to see', timeout=0.1)
+                self.wait_for_text('Do you want to see', timeout=0.05)
             except TimeoutError:
                 break
 
         end_text = ' '.join(self.get_screen())
+        print(end_text)
         match = re.search('(\d+) point', end_text)
         points = int(match.groups()[0])
         self.running = False

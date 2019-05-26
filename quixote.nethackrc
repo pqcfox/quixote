@@ -16,11 +16,11 @@ OPTIONS=showscore
 OPTIONS=time
 OPTIONS=color
 OPTIONS=boulder:8
-OPTIONS=!tombstone
-OPTIONS=!news
-OPTIONS=!legacy
-OPTIONS=suppress_alert:3.4.3
-OPTIONS=hilite_pet
+# OPTIONS=!tombstone
+# OPTIONS=!news
+# OPTIONS=!legacy
+# OPTIONS=suppress_alert:3.4.3
+# OPTIONS=hilite_pet
 
 # functionality
 OPTIONS=!autopickup
@@ -29,8 +29,8 @@ OPTIONS=pickup_burden:unburdened
 OPTIONS=!prayconfirm
 OPTIONS=pettype:none
 OPTIONS=!cmdassist
-OPTIONS=disclose:yi +avgc
-OPTIONS=menustyle:partial
+# OPTIONS=disclose:yi +avgc
+# OPTIONS=menustyle:partial
 
 # miscellaneous
 OPTIONS=!mail
