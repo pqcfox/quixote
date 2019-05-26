@@ -15,52 +15,63 @@ RACE = 'h'
 ALIGNMENT = 'n'
 READ_TIMEOUT = 0.05
 
+class Action(Enum):
+    NORTH = auto()
+    NORTH_EAST = auto()
+    EAST = auto()
+    SOUTH_EAST = auto()
+    SOUTH = auto()
+    SOUTH_WEST = auto()
+    WEST = auto()
+    NORTH_WEST = auto()
+    STAIR_UP = auto()
+    STAIR_DOWN = auto()
+    OPEN = auto()
+    CLOSE = auto()
+    SEARCH = auto()
+    LOOK = auto()
+    MORE = auto()
+    YES = auto()
+    NO = auto()
+    LOOT = auto()
+    UNTRAP = auto()
+    PRAY = auto()
+
+key_actions = {
+    Action.NORTH: 'k',
+    Action.NORTH_EAST: 'u',
+    Action.EAST: 'l',
+    Action.SOUTH_EAST: 'n',
+    Action.SOUTH: 'j',
+    Action.SOUTH_WEST: 'b',
+    Action.WEST: 'h',
+    Action.NORTH_WEST: 'y',
+    Action.STAIR_UP: '<',
+    Action.STAIR_DOWN: '>',
+    Action.OPEN: 'o',
+    Action.CLOSE: 'c',
+    Action.SEARCH: 's',
+    Action.LOOK: ':',
+    Action.MORE: '\n',
+    Action.YES: 'y',
+    Action.NO: 'n'
+}
+
+hash_actions = {
+    Action.LOOT: '#loot',
+    Action.UNTRAP: '#untrap',
+    Action.PRAY: '#pray'
+}
+
+menu_actions = [Action.MORE,
+                Action.YES,
+                Action.NO]
+
 
 class Game:
-    class Action(Enum):  # TODO: handle dialogue options
-        NORTH = auto()
-        NORTH_EAST = auto()
-        EAST = auto()
-        SOUTH_EAST = auto()
-        SOUTH = auto()
-        SOUTH_WEST = auto()
-        WEST = auto()
-        NORTH_WEST = auto()
-        STAIR_UP = auto()
-        STAIR_DOWN = auto()
-        OPEN = auto()
-        CLOSE = auto()
-        SEARCH = auto()
-        LOOK = auto()
-        LOOT = auto()
-        UNTRAP = auto()
-        PRAY = auto()
-
-    key_actions = {
-        Action.NORTH: 'k',
-        Action.NORTH_EAST: 'u',
-        Action.EAST: 'l',
-        Action.SOUTH_EAST: 'n',
-        Action.SOUTH: 'j',
-        Action.SOUTH_WEST: 'b',
-        Action.WEST: 'h',
-        Action.NORTH_WEST: 'y',
-        Action.STAIR_UP: '<',
-        Action.STAIR_DOWN: '>',
-        Action.OPEN: 'o',
-        Action.CLOSE: 'c',
-        Action.SEARCH: 's',
-        Action.LOOK: ':'
-    }
-
-    hash_actions = {
-        Action.LOOT: '#loot',
-        Action.UNTRAP: '#untrap',
-        Action.PRAY: '#pray'
-    }
-
     def __init__(self):
         self.running = True
+        self.prev_state = {}
 
     def start(self):
         self.child = pexpect.spawn(COMMAND)
@@ -92,14 +103,18 @@ class Game:
         self.child.expect('Really quit?')
         self.child.send('y')
         self.child.expect('Do you want your possessions identified?')
-        self.child.send('n')
-        self.child.expect('Do you want to see your attributes?')
-        self.child.send('n')
-        self.child.expect('Do you want to see your conduct?')
-        self.child.send('n')
-        self.child.expect('Do you want to see the dungeon overview?')
-        self.child.send('n')
-        self.child.expect('You quit')
+        self.complete_game()
+
+
+    def complete_game(self):
+        while True:
+            self.child.send('n')
+            try:
+                self.child.expect('Do you want to see', timeout=0.1)
+            except TIMEOUT:
+                break
+        print('yayyy')
+        self.child.expect(['quit', 'died', 'escaped'])
         self.child.sendline()
         self.running = False
 
@@ -120,30 +135,42 @@ class Game:
         display = self.get_screen()
         state['map'] = display[1:-2]
 
-        state['message'] = display[0].strip()
-        base_stats = {}
-        for stat in ['St', 'Dx', 'Co', 'In', 'Wi', 'Ch']:
-            match = re.search('{}:(\d+)'.format(stat), display[-2])
-            base_stats[stat] = int(match.groups()[0])
-        state['base_stats'] = base_stats
-        state['alignment'] = display[-2].split()[-1].strip()
+        state['message'] = {}
+        state['message']['text'] = display[0].strip()
+        state['message']['is_more'] = any(
+            ['--More--' in line for line in display])
+        state['message']['is_yn'] = any(
+            ['[yn]' in line for line in display])
 
-        for stat in ['Dlvl', '$', 'HP', 'Pw', 'AC', 'Xp']:
-            escaped = re.escape(stat)
-            match = re.search(
-                '{}:(\d+)(\(\d+\))?'.format(escaped), display[-1])
-            groups = match.groups()
-            state[stat] = int(groups[0])
-            if groups[1] is not None:
-                state['{}_max'.format(stat)] = int(groups[1][1:-1])
+        base_stats = {}
+        try:
+            for stat in ['St', 'Dx', 'Co', 'In', 'Wi', 'Ch']:
+                match = re.search('{}:(\d+)'.format(stat), display[-2])
+                base_stats[stat] = int(match.groups()[0])
+            state['base_stats'] = base_stats
+            state['alignment'] = display[-2].split()[-1].strip()
+
+            for stat in ['Dlvl', '$', 'HP', 'Pw', 'AC', 'Xp']:
+                escaped = re.escape(stat)
+                match = re.search(
+                    '{}:(\d+)(\(\d+\))?'.format(escaped), display[-1])
+                groups = match.groups()
+                state[stat] = int(groups[0])
+                if groups[1] is not None:
+                    state['{}_max'.format(stat)] = int(groups[1][1:-1])
+        except AttributeError:
+            state = self.prev_state
+        self.prev_state = state
+
+        if 'Do you want your possessions identified?' in display[0]:
+            state['score'] = self.complete_game()
         return state
 
     def do_action(self, action):
-        before = self.get_screen()
-        if action in self.key_actions:
-            self.child.send(self.key_actions[action])
-        elif action in self.hash_actions:
-            self.child.sendline(self.hash_actions[action])
+        if action in key_actions:
+            self.child.send(key_actions[action])
+        elif action in hash_actions:
+            self.child.sendline(hash_actions[action])
 
 
 class Display:
@@ -161,7 +188,7 @@ class Display:
 
     def update(self):
         if self.stdscr.getch() == ord('q'):
-            self.stop()
+            self.game.running = False
         else:
             game_display = game.get_screen()
             for line, row in enumerate(game_display):
@@ -179,28 +206,25 @@ class Display:
 class Bot:
     def __init__(self, game):
         self.game = game
+        self.last_show = None
 
-    def play(self, show=False, move_delay=0.05):
+    def play(self, show=False, move_delay=0.01):
         try:
             game.start()
             if show:
                 display = Display(self.game)
                 display.start()
             while game.running:
+                if show:
+                    display.update()
                 state = game.get_state()
                 action = self.choose_action(state)
                 game.do_action(action)
-
-                if show:
-                    display.update()
-                    if not display.running:
-                        break
-                    time.sleep(move_delay)  # TODO: make check against timer
+                time.sleep(move_delay)  # TODO: make check against timer
             return None  # TODO: make meaningful
-        except Exception as e:
+        finally:
             if show:
                 display.stop()
-            raise e
 
     def choose_action(self, state):
         pass
@@ -208,7 +232,13 @@ class Bot:
 
 class RandomBot(Bot):
     def choose_action(self, state):
-        act = random.choice([act for act in self.game.Action])
+        if state['message']['is_more']:
+            act = Action.MORE
+        elif state['message']['is_yn']:
+            act = Action.YES
+        else:
+            act = random.choice([act for act in Action
+                                 if act not in menu_actions])
         return act
 
 
