@@ -102,21 +102,31 @@ class Game:
         self.child.sendline('#quit')
         self.child.expect('Really quit?')
         self.child.send('y')
-        self.child.expect('Do you want your possessions identified?')
-        self.complete_game()
+        return self.complete_game()
 
+    def wait_for_text(self, text, timeout=None):
+        if timeout is not None:
+            start_time = time.time()
+        while True:
+            display = self.get_screen()
+            if any([text in line for line in display]):
+                return
+            if timeout is not None and time.time() - start_time > timeout:
+                raise TimeoutError('Timeout waiting for query')
 
     def complete_game(self):
         while True:
             self.child.send('n')
             try:
-                self.child.expect('Do you want to see', timeout=0.1)
-            except TIMEOUT:
+                self.wait_for_text('Do you want to see', timeout=0.1)
+            except TimeoutError:
                 break
-        print('yayyy')
-        self.child.expect(['quit', 'died', 'escaped'])
-        self.child.sendline()
+
+        end_text = ' '.join(self.get_screen())
+        match = re.search('(\d+) point', end_text)
+        points = int(match.groups()[0])
         self.running = False
+        return points
 
     def get_screen(self):
         text = ''
@@ -163,7 +173,10 @@ class Game:
         self.prev_state = state
 
         if 'Do you want your possessions identified?' in display[0]:
+            state['alive'] = True
             state['score'] = self.complete_game()
+        else:
+            state['alive'] = False
         return state
 
     def do_action(self, action):
@@ -208,7 +221,7 @@ class Bot:
         self.game = game
         self.last_show = None
 
-    def play(self, show=False, move_delay=0.01):
+    def play(self, show=False, move_delay=0):
         try:
             game.start()
             if show:
@@ -221,7 +234,7 @@ class Bot:
                 action = self.choose_action(state)
                 game.do_action(action)
                 time.sleep(move_delay)  # TODO: make check against timer
-            return None  # TODO: make meaningful
+            return state # TODO: make meaningful
         finally:
             if show:
                 display.stop()
@@ -245,4 +258,4 @@ class RandomBot(Bot):
 if __name__ == '__main__':
     game = Game()
     bot = RandomBot(game)
-    bot.play(show=True)
+    print(bot.play(show=True))
