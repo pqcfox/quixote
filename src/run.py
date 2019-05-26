@@ -1,6 +1,7 @@
 import curses
 import random
 import re
+import os
 import time
 from enum import Enum, auto
 
@@ -9,10 +10,8 @@ import pexpect
 from pexpect.exceptions import TIMEOUT
 
 COMMAND = 'nethack'
+OPTIONS_FILE = '/Users/watsonc/quixote/quixote.nethackrc'
 WIDTH, HEIGHT = 80, 24
-ROLE = 'v'
-RACE = 'h'
-ALIGNMENT = 'n'
 READ_TIMEOUT = 0.05
 
 class Action(Enum):
@@ -74,26 +73,21 @@ class Game:
         self.prev_state = {}
 
     def start(self):
-        self.child = pexpect.spawn(COMMAND)
+        env = os.environ
+        env['NETHACKOPTIONS'] = '@{}'.format(OPTIONS_FILE)
+        self.child = pexpect.spawn(COMMAND, env=env)
         self.screen = pyte.Screen(WIDTH, HEIGHT)
         self.stream = pyte.Stream(self.screen)
 
-        index = self.child.expect(['Shall I pick', 'Restoring save file'])
+        index = self.wait_for_texts(['Is this ok?', 'Restoring save file...'])
         if index == 1:
             self.child.sendline()
             self.quit()
             self.child = pexpect.spawn(COMMAND)
+            self.wait_for_text('Is this okay?')
 
-        self.child.send('n')
-        self.child.expect('Pick a role or profession')
-        self.child.send(ROLE)
-        self.child.expect('Pick a race or species')
-        self.child.send(RACE)
-        self.child.expect('Pick an alignment or creed')
-        self.child.send(ALIGNMENT)
-        self.child.expect('Is this ok?')
         self.child.send('y')
-        self.child.expect('--More--')
+        self.wait_for_text('--More--')
         self.child.sendline()
         self.child.sendcontrol('r')  # redraw so we can grab the map
         self.running = True
@@ -105,16 +99,24 @@ class Game:
         return self.complete_game()
 
     def wait_for_text(self, text, timeout=None):
+        return self.wait_for_texts([text], timeout=timeout)
+
+    def wait_for_texts(self, texts, timeout=None):
         if timeout is not None:
             start_time = time.time()
         while True:
             display = self.get_screen()
-            if any([text in line for line in display]):
-                return
+            for line in display:
+                print(line)
+            print('-----')
+            for index, text in enumerate(texts):
+                if any([text in line for line in display]):
+                    return index
             if timeout is not None and time.time() - start_time > timeout:
                 raise TimeoutError('Timeout waiting for query')
 
     def complete_game(self):
+        self.child.interact()
         while True:
             self.child.send('n')
             try:
@@ -221,7 +223,7 @@ class Bot:
         self.game = game
         self.last_show = None
 
-    def play(self, show=False, move_delay=0):
+    def play(self, show=False):
         try:
             game.start()
             if show:
@@ -233,8 +235,9 @@ class Bot:
                 state = game.get_state()
                 action = self.choose_action(state)
                 game.do_action(action)
-                time.sleep(move_delay)  # TODO: make check against timer
-            return state # TODO: make meaningful
+            return state
+        except Exception as e:
+            raise e
         finally:
             if show:
                 display.stop()
