@@ -1,4 +1,5 @@
 import re
+import time
 from enum import Enum, auto
 
 import pyte
@@ -81,7 +82,7 @@ class Game:
         self.child.send('y')
         self.child.expect('--More--')
         self.child.sendline()
-        print(self.get_screen())
+        self.child.sendcontrol('r')  # redraw so we can grab the map
         self.running = True
 
     def quit(self):
@@ -115,6 +116,7 @@ class Game:
     def get_state(self):
         state = {}
         display = self.get_screen()
+        state['map'] = display[1:-2]
 
         state['message'] = display[0].strip()
         base_stats = {}
@@ -128,7 +130,6 @@ class Game:
             escaped = re.escape(stat)
             match = re.search(
                 '{}:(\d+)(\(\d+\))?'.format(escaped), display[-1])
-            print(stat)
             groups = match.groups()
             state[stat] = int(groups[0])
             if groups[1] is not None:
