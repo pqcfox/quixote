@@ -125,11 +125,14 @@ class Game:
         state['alignment'] = display[-2].split()[-1].strip()
 
         for stat in ['Dlvl', '$', 'HP', 'Pw', 'AC', 'Xp']:
-            match = re.search('{}:(\d+)(\(\d+\))?'.format(stat), display[-1])
-            state[stat] = int(match.groups()[0])
-            if len(match.groups()) > 1:
-                state['{}_max'.format(stat)] = int(match.groups[1])
-
+            escaped = re.escape(stat)
+            match = re.search(
+                '{}:(\d+)(\(\d+\))?'.format(escaped), display[-1])
+            print(stat)
+            groups = match.groups()
+            state[stat] = int(groups[0])
+            if groups[1] is not None:
+                state['{}_max'.format(stat)] = int(groups[1][1:-1])
         return state
 
     def do_action(self, action):
@@ -158,5 +161,4 @@ class Bot:
 if __name__ == '__main__':
     game = Game()
     game.start()
-    # print(game.get_screen())
-    # print(game.get_state())
+    print(game.get_state())
