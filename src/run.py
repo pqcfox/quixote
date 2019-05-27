@@ -114,12 +114,11 @@ class Game:
         while True:
             self.child.send('n')
             try:
-                self.wait_for_text('Do you want to see', timeout=0.05)
+                self.wait_for_text('Do you want', timeout=0.05)
             except TimeoutError:
                 break
 
         end_text = ' '.join(self.get_screen())
-        print(end_text)
         match = re.search('(\d+) point', end_text)
         points = int(match.groups()[0])
         self.running = False
@@ -256,4 +255,4 @@ class RandomBot(Bot):
 if __name__ == '__main__':
     game = Game()
     bot = RandomBot(game)
-    print(bot.play(show=True))
+    print(bot.play(show=False))
