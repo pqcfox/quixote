@@ -155,6 +155,8 @@ class Game:
                 base_stats[stat] = int(match.groups()[0])
             state['base_stats'] = base_stats
             state['alignment'] = display[-2].split()[-1].strip()
+            match = re.search('S:(\d+)', display[-2])
+            state['est_score'] = int(match.groups()[0])
 
             for stat in ['Dlvl', '$', 'HP', 'Pw', 'AC', 'Xp']:
                 escaped = re.escape(stat)
@@ -167,8 +169,10 @@ class Game:
         except AttributeError:
             state = self.prev_state
 
-        # TODO: get est_score
-        # state['reward'] = state['est_score'] - self.prev_state['est_score']
+        try:
+            state['reward'] = state['est_score'] - self.prev_state['est_score']
+        except KeyError:
+            state['reward'] = 0
         if 'Do you want your possessions identified?' in display[0]:
             state['alive'] = True
             state['score'] = self.complete_game()
