@@ -9,7 +9,7 @@ import pyte
 import pexpect
 from pexpect.exceptions import TIMEOUT
 
-COMMAND = 'nethack'
+COMMAND = '/Users/watsonc/quixote/bin/nethack'
 OPTIONS_FILE = '/Users/watsonc/quixote/quixote.nethackrc'
 WIDTH, HEIGHT = 80, 24
 READ_TIMEOUT = 0.05
@@ -166,13 +166,15 @@ class Game:
                     state['{}_max'.format(stat)] = int(groups[1][1:-1])
         except AttributeError:
             state = self.prev_state
-        self.prev_state = state
 
+        # TODO: get est_score
+        # state['reward'] = state['est_score'] - self.prev_state['est_score']
         if 'Do you want your possessions identified?' in display[0]:
             state['alive'] = True
             state['score'] = self.complete_game()
         else:
             state['alive'] = False
+        self.prev_state = state
         return state
 
     def do_action(self, action):
@@ -213,15 +215,14 @@ class Display:
 
 
 class Bot:
-    def __init__(self, game):
-        self.game = game
-        self.last_show = None
+    def __init__(self):
+        pass
 
-    def play(self, show=False):
+    def play(self, game, show=False):
         try:
             game.start()
             if show:
-                display = Display(self.game)
+                display = Display(game)
                 display.start()
             while game.running:
                 if show:
@@ -252,7 +253,25 @@ class RandomBot(Bot):
         return act
 
 
+class BasicQLearningBot(Bot):
+    def __init__(self):
+        Q = defaultdict(float)
+
+    def parse_state(self, state):
+        pass
+
+    def choose_action(self, state):
+        if state['message']['is_more']:
+            act = Action.MORE
+        elif state['message']['is_yn']:
+            act = Action.YES
+        else:
+            parsed_state = parse_state
+            # update Q
+            # update other stuff
+
+
 if __name__ == '__main__':
     game = Game()
-    bot = RandomBot(game)
-    print(bot.play(show=False))
+    bot = RandomBot()
+    print(bot.play(game, show=True))
