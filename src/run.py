@@ -62,9 +62,22 @@ hash_actions = {
     Action.PRAY: '#pray'
 }
 
-menu_actions = [Action.MORE,
-                Action.YES,
-                Action.NO]
+menu_actions = [
+    Action.MORE,
+    Action.YES,
+    Action.NO
+]
+
+move_actions = [
+    Action.NORTH,
+    Action.NORTH_EAST,
+    Action.EAST,
+    Action.SOUTH_EAST,
+    Action.SOUTH,
+    Action.SOUTH_WEST,
+    Action.WEST,
+    Action.NORTH_WEST
+]
 
 
 class Game:
@@ -253,16 +266,44 @@ class RandomBot(Bot):
             act = Action.YES
         else:
             act = random.choice([act for act in Action
-                                 if act not in menu_actions])
+                                 if act in move_actions])
         return act
 
 
-class BasicQLearningBot(Bot):
+class BasicModelBasedBot(Bot):
     def __init__(self):
-        Q = defaultdict(float)
+        self.prev_state = None
+        self.prev_action = None
+        self.prev_action = None
+        self.observations = []
+        self.exploring = True
+
+    def find_self(self, state_map):
+        for y in range(len(state_map)):
+            for x in range(len(state_map[0])):
+                if state['map'] == '@':
+                    return x, y
+
+    def compute_probs(self):
+        pass
+
+    def get_neighbors(self, state_map, x, y):
+        neighbors = []
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                if dx == dy == 0:
+                    continue
+                neighbors.append[state_map[y][x]]
+        return neighbors
 
     def parse_state(self, state):
-        pass
+        parsed = []
+        x, y = self.find_self(state['map'])
+        neighbors = self.get_neighbors(state['map'], x, y)
+        for patterns in ('abcdefghijklmnopqurstvwxyzABCEFGHIJKLMNOPQRSTUVWXYZ', '+', '>', '$', '-|'):
+            for neighbor in neighbors:
+                parsed.append(neighbor in pattern)
+        return parsed
 
     def choose_action(self, state):
         if state['message']['is_more']:
@@ -270,9 +311,19 @@ class BasicQLearningBot(Bot):
         elif state['message']['is_yn']:
             act = Action.YES
         else:
-            parsed_state = parse_state
-            # update Q
-            # update other stuff
+            parsed_state = self.parse_state(state)
+            if self.exploring:
+                if self.prev_state is not None:
+                    observation = (self.prev_state, self.prev_action,
+                                   parsed_state)
+                    self.observations.append(observation)
+                act = random.choice([act for act in Action
+                                     if act not in menu_actions])
+            else:
+                pass
+            self.prev_state = parsed_state
+            self.prev_action = act
+        return act
 
 
 if __name__ == '__main__':
