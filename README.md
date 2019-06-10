@@ -1,2 +1,2 @@
-quixote: a deep RL bot for nethack
-----------------------------------
+quixote: a reinforcement learning bot for nethack
+-------------------------------------------------
