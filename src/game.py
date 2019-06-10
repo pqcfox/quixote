@@ -115,7 +115,7 @@ class Game:
             state['reward'] = state['est_score'] - self.prev_state['est_score']
         except KeyError:
             state['reward'] = 0
-        if 'Do you want your possessions identified?' in display[0]:
+        if 'Do you want' in display[0]:
             state['alive'] = True
             state['score'] = self.complete_game()
         else:

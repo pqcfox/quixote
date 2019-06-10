@@ -31,7 +31,6 @@ class ModelBasedBot:
         self.beneath = None
         self.observations = []
         self.exploring = True
-        # state_size = 
         # self.transition_probs = [[[1.0 / len(MOVE_ACTIONS)
         #                            for _ in range(len(
         self.transition_probs = None
@@ -114,7 +113,7 @@ class ModelBasedBot:
                 and self.observations[-1][-1] is not None):
             binary_rep = ''.join(['1' if part else '0' for part in
                                   self.observations[-1][-1]])
-            status += '\tST:{:012x}'.format(int(binary_rep, 2))
+            status += '\tST:{:014x}'.format(int(binary_rep, 2))
         if self.beneath is not None:
             status += '\tBN:{}'.format(self.beneath)
         else:
