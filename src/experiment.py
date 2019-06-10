@@ -35,6 +35,8 @@ class Experiment:
                         if not self.exp_display.running:
                             self.exp_game.quit()  # TODO: final score
                             break
+                        if self.exp_display.paused:
+                            continue
                     state = self.exp_game.get_state()
                     act = self.exp_bot.choose_action(state)
                     self.exp_game.do_action(act)

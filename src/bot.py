@@ -3,7 +3,6 @@ import string
 import collections
 
 import action
-import display
 
 
 class RandomBot:
@@ -25,15 +24,17 @@ class RandomBot:
 class QLearningBot:
     PATTERNS = [string.ascii_letters, '+', '>', '-', '|', ' ']
 
-    def __init__(self, lr=0.1, epsilon=0.1, discount=0.5):
+    def __init__(self, lr=0.2, epsilon=0.1, discount=0.2):
         self.prev_state = None
         self.prev_act = None
         self.prev_reward = None
         self.prev_map = None
+        self.prev_poses = []
+        self.prev_Q = None
         self.beneath = None
         self.lr = lr
         self.epsilon = epsilon
-        self.discount = 0.5
+        self.discount = discount
         self.Q = collections.defaultdict(float)
 
     def find_self(self, state_map):
@@ -45,8 +46,8 @@ class QLearningBot:
 
     def get_neighbors(self, state_map, x, y):
         neighbors = []
-        for dx in (-1, 0, 1):
-            for dy in (-1, 0, 1):
+        for dx in (-2, 0, 2):
+            for dy in (-2, 0, 2):
                 if dx == dy == 0:
                     continue
                 neighbors.append(state_map[y + dy][x + dx])
@@ -65,12 +66,12 @@ class QLearningBot:
                 break
 
     def parse_state(self, state):
-        pair = self.find_self(state['map'])
-        if pair is None or self.prev_map is None:
+        pos = self.find_self(state['map'])
+        if pos is None or self.prev_map is None:
             parsed = None
         else:
             parsed = []
-            x, y = pair
+            x, y = pos
             self.beneath = self.prev_map[y][x]
             neighbors = self.get_neighbors(state['map'], x, y)
             for pattern in self.PATTERNS:
@@ -81,19 +82,27 @@ class QLearningBot:
         if parsed is None:
             return None
         binary_rep = ''.join(['1' if part else '0' for part in parsed])
-        return int(binary_rep, 2)
+        return (int(binary_rep, 2), pos)
 
     def update_Q(self, parsed_state):
         if self.prev_state is not None:
+            self.prev_Q = self.Q[(self.prev_state, self.prev_act)]
             max_Q = max([self.Q[(parsed_state, act)]
                          for act in action.MOVE_ACTIONS])
-            new_Q = (1 - self.lr) * self.Q[(self.prev_state, self.prev_act)]
+            new_Q = (1 - self.lr) * self.prev_Q
             new_Q += self.lr * (self.prev_reward + self.discount * max_Q)
             self.Q[(self.prev_state, self.prev_act)] = new_Q
 
+    def modify_reward(self, reward, pos):
+        if pos in self.prev_poses:
+            reward -= 0.5
+        return reward - 0.1
+
     def choose_action(self, state):
+        pos = self.find_self(state['map'])
         parsed_state = self.parse_state(state)
         self.update_Q(parsed_state)
+
         if state['message']['is_more']:
             act = action.Action.MORE
         elif state['message']['is_yn']:
@@ -114,19 +123,23 @@ class QLearningBot:
                 act = random.choice(best_actions)
         self.prev_state = parsed_state
         self.prev_act = act
-        self.prev_reward = state['reward']
+        self.prev_reward = self.modify_reward(state['reward'], pos)
+        self.prev_poses.append(pos)
         return act
 
     def get_status(self):
         train_string = 'TRAIN' if self.train else 'TEST'
         status = '{}\tEP:{}'.format(train_string, self.epoch)
-        if self.prev_state is not None:
-            status += '\tST:{:014x}\tQ:{:.3f}'.format(
-                self.prev_state, self.Q[(self.prev_state, self.prev_act)])
+        if self.prev_state is not None and self.prev_Q is not None:
+            status += '\tQ:{:.3f}\tR:{:.3f}\tST:{:038x}, {}'.format(
+                self.Q[(self.prev_state, self.prev_act.name)],
+                self.prev_reward, self.prev_state[0], self.prev_state[1])
+        status += '\n'
         if self.beneath is not None:
             status += '\tBN:{}'.format(self.beneath)
-        else:
-            status += '\tHELP'
         if self.prev_act is not None:
             status += '\t{}'.format(self.prev_act)
+        status += '\n'
+        for act in action.MOVE_ACTIONS:
+            status += '\n\t{}:{:.3f}'.format(act.name, self.Q[(self.prev_state, act)])
         return status

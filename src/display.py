@@ -4,6 +4,7 @@ import curses
 class Display:
     def __init__(self):
         self.running = True
+        self.paused = False
 
     def start(self):
         self.stdscr = curses.initscr()
@@ -14,13 +15,18 @@ class Display:
         self.running = True
 
     def update(self, game_screen, status):
-        if self.stdscr.getch() == ord('q'):
+        char = self.stdscr.getch()
+        if char == ord('q'):
             self.running = False
         else:
+            if char == ord(' '):
+                self.paused = not self.paused
             self.stdscr.clear()
             for line, row in enumerate(game_screen):
                 self.stdscr.addstr(line, 0, row)
             self.stdscr.addstr(len(game_screen), 0, 'STATUS: {}'.format(status))
+            if self.paused:
+                self.stdscr.addstr(0, 0, 'PAUSE', curses.A_REVERSE)
             self.stdscr.refresh()
 
     def stop(self):
