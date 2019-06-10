@@ -62,7 +62,10 @@ class Game:
 
         end_text = ' '.join(self.get_screen())
         match = re.search('(\d+) point', end_text)
-        points = int(match.groups()[0])
+        try:
+            points = int(match.groups()[0])
+        except AttributeError:
+            points = None
         self.running = False
         return points
 

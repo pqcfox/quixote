@@ -22,7 +22,7 @@ class RandomBot:
 
 
 class QLearningBot:
-    PATTERNS = [string.ascii_letters, '+', '>', '-', '|', ' ']
+    PATTERNS = [string.ascii_letters, '+', '>', '-', '|', ' ', '#']
 
     def __init__(self, lr=0.2, epsilon=0.1, discount=0.2):
         self.prev_state = None
@@ -46,8 +46,8 @@ class QLearningBot:
 
     def get_neighbors(self, state_map, x, y):
         neighbors = []
-        for dx in (-2, 0, 2):
-            for dy in (-2, 0, 2):
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
                 if dx == dy == 0:
                     continue
                 neighbors.append(state_map[y + dy][x + dx])
@@ -82,7 +82,7 @@ class QLearningBot:
         if parsed is None:
             return None
         binary_rep = ''.join(['1' if part else '0' for part in parsed])
-        return (int(binary_rep, 2), pos)
+        return int(binary_rep, 2)
 
     def update_Q(self, parsed_state):
         if self.prev_state is not None:
@@ -131,9 +131,9 @@ class QLearningBot:
         train_string = 'TRAIN' if self.train else 'TEST'
         status = '{}\tEP:{}'.format(train_string, self.epoch)
         if self.prev_state is not None and self.prev_Q is not None:
-            status += '\tQ:{:.3f}\tR:{:.3f}\tST:{:038x}, {}'.format(
+            status += '\tQ:{:.3f}\tR:{:.3f}\tST:{:016x}'.format(
                 self.Q[(self.prev_state, self.prev_act.name)],
-                self.prev_reward, self.prev_state[0], self.prev_state[1])
+                self.prev_reward, self.prev_state)
         status += '\n'
         if self.beneath is not None:
             status += '\tBN:{}'.format(self.beneath)
