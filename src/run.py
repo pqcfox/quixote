@@ -3,7 +3,7 @@ import bot
 import display
 import experiment
 
-exp_bot = bot.ModelBasedBot()
+exp_bot = bot.QLearningBot()
 exp_game = game.Game()
 exp_display = display.Display()
 

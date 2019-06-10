@@ -1,5 +1,6 @@
 import random
 import string
+import collections
 
 import action
 import display
@@ -21,20 +22,17 @@ class RandomBot:
         return '{}\tEPOCH:{}\t{}'.format(train_string, self.epoch, self.prev_act)
 
 
-class ModelBasedBot:
-    PATTERNS = [string.ascii_letters, '+', '>', '$', '-', '|']
+class QLearningBot:
+    PATTERNS = [string.ascii_letters, '+', '>', '-', '|']
 
-    def __init__(self):
+    def __init__(self, learning_rate=0.1, epsilon=0.1):
         self.prev_state = None
         self.prev_act = None
         self.prev_map = None
         self.beneath = None
-        self.observations = []
-        self.exploring = True
-        # self.transition_probs = [[[1.0 / len(MOVE_ACTIONS)
-        #                            for _ in range(len(
-        self.transition_probs = None
-        self.rewards = None
+        self.learning_rate = learning_rate
+        self.epsilon = epsilon
+        self.Q = collections.defaultdict(float)
 
     def find_self(self, state_map):
         for y in range(len(state_map)):
@@ -78,42 +76,44 @@ class ModelBasedBot:
                     parsed.append(neighbor in pattern)
                 parsed.append(self.beneath in pattern)
         self.update_prev_map(state['map'])
-        return parsed
+        if parsed is None:
+            return None
+        binary_rep = ''.join(['1' if part else '0' for part in parsed])
+        return int(binary_rep, 2)
+
+    def update_Q(self, parsed_state):
+        pass
 
     def choose_action(self, state):
-        if not self.exploring and self.epoch > self.prob_update_epoch:
-            self.update_probs()
+        parsed_state = self.parse_state(state)
+        self.update_Q(parsed_state)
         if state['message']['is_more']:
             act = action.Action.MORE
         elif state['message']['is_yn']:
             act = action.Action.YES
         else:
-            parsed_state = self.parse_state(state)
-            # TODO: unify by initializing probs
-            if self.exploring:
-                if self.prev_state is not None:
-                    observation = (self.prev_state, self.prev_act,
-                                   parsed_state)
-                    self.observations.append(observation)
-                act = random.choice([act for act in action.MOVE_ACTIONS])
+            if random.random() < self.epsilon:
+                act = random.choice(action.MOVE_ACTIONS)
             else:
-                pass  # TODO: implement
-            self.prev_state = parsed_state
-            self.prev_act = act
+                best_actions = None
+                best_Q = None
+                for new_act in action.MOVE_ACTIONS:
+                    new_Q = self.Q[(parsed_state, new_act)]
+                    if best_Q is None or new_Q > best_Q:
+                        best_actions = [new_act]
+                        best_Q = new_Q
+                    elif new_Q == best_Q:
+                        best_actions.append(new_act)
+                act = random.choice(best_actions)
+        self.prev_state = parsed_state
+        self.prev_act = act
         return act
 
-    def update_probs_and_rewards():
-        pass
-
     def get_status(self):
-        exp_string = 'LORE' if self.exploring else 'LOIT'
         train_string = 'TRAIN' if self.train else 'TEST'
-        status = '{}\tEP:{}\t{}'.format(train_string, self.epoch, exp_string)
-        if (len(self.observations) > 0
-                and self.observations[-1][-1] is not None):
-            binary_rep = ''.join(['1' if part else '0' for part in
-                                  self.observations[-1][-1]])
-            status += '\tST:{:014x}'.format(int(binary_rep, 2))
+        status = '{}\tEP:{}'.format(train_string, self.epoch)
+        if self.prev_state is not None:
+            status += '\tST:{:014x}'.format(self.prev_state)
         if self.beneath is not None:
             status += '\tBN:{}'.format(self.beneath)
         else:
