@@ -3,78 +3,13 @@ import random
 import re
 import os
 import time
-from enum import Enum, auto
 
 import pyte
 import pexpect
 from pexpect.exceptions import TIMEOUT
 
 import config
-
-class Action(Enum):
-    NORTH = auto()
-    NORTH_EAST = auto()
-    EAST = auto()
-    SOUTH_EAST = auto()
-    SOUTH = auto()
-    SOUTH_WEST = auto()
-    WEST = auto()
-    NORTH_WEST = auto()
-    STAIR_UP = auto()
-    STAIR_DOWN = auto()
-    OPEN = auto()
-    CLOSE = auto()
-    SEARCH = auto()
-    LOOK = auto()
-    MORE = auto()
-    YES = auto()
-    NO = auto()
-    LOOT = auto()
-    UNTRAP = auto()
-    PRAY = auto()
-
-key_actions = {
-    Action.NORTH: 'k',
-    Action.NORTH_EAST: 'u',
-    Action.EAST: 'l',
-    Action.SOUTH_EAST: 'n',
-    Action.SOUTH: 'j',
-    Action.SOUTH_WEST: 'b',
-    Action.WEST: 'h',
-    Action.NORTH_WEST: 'y',
-    Action.STAIR_UP: '<',
-    Action.STAIR_DOWN: '>',
-    Action.OPEN: 'o',
-    Action.CLOSE: 'c',
-    Action.SEARCH: 's',
-    Action.LOOK: ':',
-    Action.MORE: '\n',
-    Action.YES: 'y',
-    Action.NO: 'n'
-}
-
-hash_actions = {
-    Action.LOOT: '#loot',
-    Action.UNTRAP: '#untrap',
-    Action.PRAY: '#pray'
-}
-
-menu_actions = [
-    Action.MORE,
-    Action.YES,
-    Action.NO
-]
-
-move_actions = [
-    Action.NORTH,
-    Action.NORTH_EAST,
-    Action.EAST,
-    Action.SOUTH_EAST,
-    Action.SOUTH,
-    Action.SOUTH_WEST,
-    Action.WEST,
-    Action.NORTH_WEST
-]
+import action
 
 
 class Game:
@@ -191,11 +126,11 @@ class Game:
         self.prev_state = state
         return state
 
-    def do_action(self, action):
-        if action in key_actions:
-            self.child.send(key_actions[action])
-        elif action in hash_actions:
-            self.child.sendline(hash_actions[action])
+    def do_action(self, act):
+        if act in action.KEY_ACTIONS:
+            self.child.send(action.KEY_ACTIONS[act])
+        elif act in action.HASH_ACTIONS:
+            self.child.sendline(action.HASH_ACTIONS[act])
 
 
 class Display:
@@ -242,8 +177,8 @@ class Bot:
                 if show:
                     display.update()
                 state = game.get_state()
-                action = self.choose_action(state)
-                game.do_action(action)
+                act = self.choose_action(state)
+                game.do_action(act)
             return state
         except Exception as e:
             raise e
@@ -258,20 +193,19 @@ class Bot:
 class RandomBot(Bot):
     def choose_action(self, state):
         if state['message']['is_more']:
-            act = Action.MORE
+            act = action.Action.MORE
         elif state['message']['is_yn']:
-            act = Action.YES
+            act = action.Action.YES
         else:
-            act = random.choice([act for act in Action
-                                 if act in move_actions])
+            act = random.choice([act for act in action.Action
+                                 if act in action.MOVE_ACTIONS])
         return act
 
 
 class BasicModelBasedBot(Bot):
     def __init__(self):
         self.prev_state = None
-        self.prev_action = None
-        self.prev_action = None
+        self.prev_act = None
         self.observations = []
         self.exploring = True
 
@@ -311,15 +245,15 @@ class BasicModelBasedBot(Bot):
             parsed_state = self.parse_state(state)
             if self.exploring:
                 if self.prev_state is not None:
-                    observation = (self.prev_state, self.prev_action,
+                    observation = (self.prev_state, self.prev_act,
                                    parsed_state)
                     self.observations.append(observation)
                 act = random.choice([act for act in Action
-                                     if act not in menu_actions])
+                                     if act not in action.MENU_ACTIONS])
             else:
                 pass
             self.prev_state = parsed_state
-            self.prev_action = act
+            self.prev_act = act
         return act
 
 
