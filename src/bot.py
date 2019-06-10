@@ -4,34 +4,7 @@ import action
 import display
 
 
-class BaseBot:
-    def __init__(self):
-        pass
-
-    def play(self, current_game, show=False):
-        try:
-            current_game.start()
-            if show:
-                screen = display.Display(current_game)
-                screen.start()
-            while current_game.running:
-                if show:
-                    screen.update()
-                state = current_game.get_state()
-                act = self.choose_action(state)
-                current_game.do_action(act)
-            return state
-        except Exception as e:
-            raise e
-        finally:
-            if show:
-                screen.stop()
-
-    def choose_action(self, state):
-        pass
-
-
-class RandomBot(BaseBot):
+class RandomBot:
     def choose_action(self, state):
         if state['message']['is_more']:
             act = action.Action.MORE
@@ -43,8 +16,9 @@ class RandomBot(BaseBot):
         return act
 
 
-class BasicModelBasedBot(BaseBot):
+class BasicModelBasedBot:
     def __init__(self):
+        self.state = {}
         self.prev_state = None
         self.prev_act = None
         self.observations = []

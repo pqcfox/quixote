@@ -1,6 +1,11 @@
 import game
 import bot
+import display
+import experiment
 
-current_game = game.Game()
-bot = bot.RandomBot()
-print(bot.play(current_game, show=True))
+exp_bot = bot.RandomBot()
+exp_game = game.Game()
+exp_display = display.Display()
+
+exp = experiment.Experiment(exp_bot, exp_game, exp_display)
+print(exp.run(show=True))

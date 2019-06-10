@@ -2,8 +2,7 @@ import curses
 
 
 class Display:
-    def __init__(self, current_game):
-        self.current_game = current_game
+    def __init__(self):
         self.running = True
 
     def start(self):
@@ -14,12 +13,11 @@ class Display:
         curses.curs_set(0)
         self.running = True
 
-    def update(self):
+    def update(self, game_screen):
         if self.stdscr.getch() == ord('q'):
-            self.current_game.running = False
+            self.running = False
         else:
-            game_display = self.current_game.get_screen()
-            for line, row in enumerate(game_display):
+            for line, row in enumerate(game_screen):
                 self.stdscr.addstr(line, 0, row)
             self.stdscr.refresh()
 
