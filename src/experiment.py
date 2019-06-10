@@ -1,4 +1,9 @@
+import time
+
 from tqdm import tqdm
+
+import config
+
 
 class Experiment:
     def __init__(self, exp_bot, exp_game, exp_display):
@@ -22,9 +27,11 @@ class Experiment:
                 if verbose:
                     pbar = tqdm()
                 while self.exp_game.running:
+                    start_time = time.time()
                     if show:
                         game_screen = self.exp_game.get_screen()
-                        self.exp_display.update(game_screen)
+                        status = self.exp_bot.get_status()
+                        self.exp_display.update(game_screen, status)
                         if not self.exp_display.running:
                             self.exp_game.quit()  # TODO: final score
                             break
@@ -33,6 +40,9 @@ class Experiment:
                     self.exp_game.do_action(act)
                     if verbose:
                         pbar.update(1)
+                    remaining = config.MOVE_DELAY - (time.time() - start_time)
+                    if remaining > 0:
+                        time.sleep(remaining)
                 end_states.append(state)
         except Exception as e:
             raise e
@@ -40,5 +50,3 @@ class Experiment:
             if show:
                 self.exp_display.stop()
         return end_states
-
-

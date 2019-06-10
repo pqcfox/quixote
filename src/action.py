@@ -62,5 +62,7 @@ MOVE_ACTIONS = [
     Action.SOUTH,
     Action.SOUTH_WEST,
     Action.WEST,
-    Action.NORTH_WEST
+    Action.NORTH_WEST,
+    Action.STAIR_UP,
+    Action.STAIR_DOWN
 ]
