@@ -23,15 +23,17 @@ class RandomBot:
 
 
 class QLearningBot:
-    PATTERNS = [string.ascii_letters, '+', '>', '-', '|']
+    PATTERNS = [string.ascii_letters, '+', '>', '-', '|', ' ']
 
-    def __init__(self, learning_rate=0.1, epsilon=0.1):
+    def __init__(self, lr=0.1, epsilon=0.1, discount=0.5):
         self.prev_state = None
         self.prev_act = None
+        self.prev_reward = None
         self.prev_map = None
         self.beneath = None
-        self.learning_rate = learning_rate
+        self.lr = lr
         self.epsilon = epsilon
+        self.discount = 0.5
         self.Q = collections.defaultdict(float)
 
     def find_self(self, state_map):
@@ -82,7 +84,12 @@ class QLearningBot:
         return int(binary_rep, 2)
 
     def update_Q(self, parsed_state):
-        pass
+        if self.prev_state is not None:
+            max_Q = max([self.Q[(parsed_state, act)]
+                         for act in action.MOVE_ACTIONS])
+            new_Q = (1 - self.lr) * self.Q[(self.prev_state, self.prev_act)]
+            new_Q += self.lr * (self.prev_reward + self.discount * max_Q)
+            self.Q[(self.prev_state, self.prev_act)] = new_Q
 
     def choose_action(self, state):
         parsed_state = self.parse_state(state)
@@ -107,13 +114,15 @@ class QLearningBot:
                 act = random.choice(best_actions)
         self.prev_state = parsed_state
         self.prev_act = act
+        self.prev_reward = state['reward']
         return act
 
     def get_status(self):
         train_string = 'TRAIN' if self.train else 'TEST'
         status = '{}\tEP:{}'.format(train_string, self.epoch)
         if self.prev_state is not None:
-            status += '\tST:{:014x}'.format(self.prev_state)
+            status += '\tST:{:014x}\tQ:{:.3f}'.format(
+                self.prev_state, self.Q[(self.prev_state, self.prev_act)])
         if self.beneath is not None:
             status += '\tBN:{}'.format(self.beneath)
         else:
