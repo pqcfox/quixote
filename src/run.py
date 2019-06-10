@@ -9,10 +9,7 @@ import pyte
 import pexpect
 from pexpect.exceptions import TIMEOUT
 
-COMMAND = '/Users/watsonc/quixote/bin/nethack'
-OPTIONS_FILE = '/Users/watsonc/quixote/quixote.nethackrc'
-WIDTH, HEIGHT = 80, 24
-READ_TIMEOUT = 0.05
+import config
 
 class Action(Enum):
     NORTH = auto()
@@ -87,16 +84,16 @@ class Game:
 
     def start(self):
         env = os.environ
-        env['NETHACKOPTIONS'] = '@{}'.format(OPTIONS_FILE)
-        self.child = pexpect.spawn(COMMAND, env=env)
-        self.screen = pyte.Screen(WIDTH, HEIGHT)
+        env['NETHACKOPTIONS'] = '@{}'.format(config.OPTIONS_FILE)
+        self.child = pexpect.spawn(config.COMMAND, env=env)
+        self.screen = pyte.Screen(config.WIDTH, config.HEIGHT)
         self.stream = pyte.Stream(self.screen)
 
         index = self.wait_for_texts(['Is this ok?', 'Restoring save file...'])
         if index == 1:
             self.child.sendline()
             self.quit()
-            self.child = pexpect.spawn(COMMAND)
+            self.child = pexpect.spawn(config.COMMAND)
             self.wait_for_text('Is this ok?')
 
         self.child.send('y')
@@ -142,7 +139,7 @@ class Game:
         while True:
             try:
                 read_bytes = self.child.read_nonblocking(
-                    size=self.child.maxread, timeout=READ_TIMEOUT)
+                    size=self.child.maxread, timeout=config.READ_TIMEOUT)
                 text += read_bytes.decode('ascii')
             except TIMEOUT:
                 break
