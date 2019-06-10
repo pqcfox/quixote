@@ -81,14 +81,6 @@ class Game:
     def get_state(self):
         state = {}
         display = self.get_screen()
-        state['map'] = display[1:-2]
-
-        state['message'] = {}
-        state['message']['text'] = display[0].strip()
-        state['message']['is_more'] = any(
-            ['--More--' in line for line in display])
-        state['message']['is_yn'] = any(
-            ['[yn]' in line for line in display])
 
         base_stats = {}
         try:
@@ -110,6 +102,14 @@ class Game:
                     state['{}_max'.format(stat)] = int(groups[1][1:-1])
         except AttributeError:
             state = self.prev_state
+
+        state['map'] = display[1:-2]
+        state['message'] = {}
+        state['message']['text'] = display[0].strip()
+        state['message']['is_more'] = any(
+            ['--More--' in line for line in display])
+        state['message']['is_yn'] = any(
+            ['[yn]' in line for line in display])
 
         try:
             state['reward'] = state['est_score'] - self.prev_state['est_score']

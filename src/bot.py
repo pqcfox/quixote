@@ -16,7 +16,7 @@ class RandomBot:
         return act
 
 
-class BasicModelBasedBot:
+class ModelBasedBot:
     def __init__(self):
         self.state = {}
         self.prev_state = None
@@ -63,10 +63,9 @@ class BasicModelBasedBot:
                     observation = (self.prev_state, self.prev_act,
                                    parsed_state)
                     self.observations.append(observation)
-                act = random.choice([act for act in Action
-                                     if act not in action.MENU_ACTIONS])
+                act = random.choice([act for act in action.MOVE_ACTIONS])
             else:
-                pass
+                pass  # TODO: implement
             self.prev_state = parsed_state
             self.prev_act = act
         return act

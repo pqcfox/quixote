@@ -1,4 +1,4 @@
-import tqdm
+from tqdm import tqdm
 
 class Experiment:
     def __init__(self, exp_bot, exp_game, exp_display):
@@ -12,22 +12,27 @@ class Experiment:
 
         end_states = []
         try:
-            for epoch in range(epochs):
+            epoch_iter = tqdm(range(epochs)) if verbose else range(epochs)
+            for epoch in epoch_iter:
                 self.exp_bot.epoch = epoch
                 self.exp_bot.train = train
                 self.exp_game.start()
                 if show:
                     self.exp_display.start()
+                if verbose:
+                    pbar = tqdm()
                 while self.exp_game.running:
                     if show:
                         game_screen = self.exp_game.get_screen()
                         self.exp_display.update(game_screen)
                         if not self.exp_display.running:
-                            self.exp_game.running = False
+                            self.exp_game.quit()  # TODO: final score
                             break
                     state = self.exp_game.get_state()
                     act = self.exp_bot.choose_action(state)
                     self.exp_game.do_action(act)
+                    if verbose:
+                        pbar.update(1)
                 end_states.append(state)
         except Exception as e:
             raise e
