@@ -53,6 +53,8 @@ class Game:
                 raise TimeoutError('Timeout waiting for query')
 
     def complete_game(self):
+        # from tqdm import tqdm; tqdm.write('completing game!')
+        # tqdm.write('\n'.join(self.get_screen()))
         while True:
             self.child.send('n')
             try:
@@ -65,6 +67,7 @@ class Game:
         try:
             points = int(match.groups()[0])
         except AttributeError:
+            import time; time.sleep(10000)
             points = None
         self.running = False
         return points
@@ -112,7 +115,7 @@ class Game:
         state['message']['is_more'] = any(
             ['--More--' in line for line in display])
         state['message']['is_yn'] = any(
-            ['[yn]' in line for line in display])
+            ['[yn' in line for line in display])
 
         try:
             state['reward'] = state['est_score'] - self.prev_state['est_score']

@@ -6,35 +6,46 @@ import action
 
 
 class RandomBot:
+    def __init__(self):
+        self.prev_act = None
+
     def choose_action(self, state):
         if state['message']['is_more']:
             act = action.Action.MORE
         elif state['message']['is_yn']:
-            act = action.Action.YES
+            act = (action.Action.NO if 'Beware' in state['message']['text']
+                   else action.Action.YES)
         else:
             act = random.choice([act for act in action.Action
                                  if act in action.MOVE_ACTIONS])
+        self.prev_act = act
         return act
 
     def get_status(self):
         train_string = 'TRAIN' if self.train else 'TEST'
-        return '{}\tEPOCH:{}\t{}'.format(train_string, self.epoch, self.prev_act)
+        status = '{}\tEPOCH:{}'.format(train_string, self.epoch)
+        if self.prev_act is not None:
+            status += '\t{}'.format(self.prev_act)
+        return status
 
 
 class QLearningBot:
     PATTERNS = [string.ascii_letters, '+', '>', '-', '|', ' ', '#']
 
-    def __init__(self, lr=0.2, epsilon=0.1, discount=0.2):
+    def __init__(self, lr=0.3, epsilon=0.1, discount=0.6):
         self.prev_state = None
         self.prev_act = None
         self.prev_reward = None
         self.prev_map = None
         self.prev_poses = []
+        self.prev_level = None
         self.prev_Q = None
         self.beneath = None
+        self.prev_discovered = False
         self.lr = lr
         self.epsilon = epsilon
         self.discount = discount
+        self.state_act_counts = collections.defaultdict(int)
         self.Q = collections.defaultdict(float)
 
     def find_self(self, state_map):
@@ -50,7 +61,10 @@ class QLearningBot:
             for dy in (-1, 0, 1):
                 if dx == dy == 0:
                     continue
-                neighbors.append(state_map[y + dy][x + dx])
+                try:
+                    neighbors.append(state_map[y + dy][x + dx])
+                except IndexError:
+                    neighbors.append(' ')
         return neighbors
 
     def update_prev_map(self, new_map):
@@ -64,6 +78,8 @@ class QLearningBot:
                     beneath = replaced_map[line][row.index('@')]
                 self.prev_map[line] = row.replace('@', beneath)
                 break
+        if replaced_map != self.prev_map:
+            self.prev_discovered = True
 
     def parse_state(self, state):
         pos = self.find_self(state['map'])
@@ -78,6 +94,10 @@ class QLearningBot:
                 for neighbor in neighbors:
                     parsed.append(neighbor in pattern)
                 parsed.append(self.beneath in pattern)
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    parsed.append((x + dx, y + dy) in self.prev_poses)
+
         self.update_prev_map(state['map'])
         if parsed is None:
             return None
@@ -85,17 +105,25 @@ class QLearningBot:
         return int(binary_rep, 2)
 
     def update_Q(self, parsed_state):
+        state_act_pair = (self.prev_state, self.prev_act)
+        self.state_act_counts[state_act_pair] += 1
+        state_act_lr = self.lr / float(self.state_act_counts[state_act_pair])
         if self.prev_state is not None:
-            self.prev_Q = self.Q[(self.prev_state, self.prev_act)]
+            self.prev_Q = self.Q[state_act_pair]
             max_Q = max([self.Q[(parsed_state, act)]
                          for act in action.MOVE_ACTIONS])
-            new_Q = (1 - self.lr) * self.prev_Q
-            new_Q += self.lr * (self.prev_reward + self.discount * max_Q)
-            self.Q[(self.prev_state, self.prev_act)] = new_Q
+            new_Q = (1 - state_act_lr) * self.prev_Q
+            new_Q += state_act_lr * (self.prev_reward + self.discount * max_Q)
+            self.Q[state_act_pair] = new_Q
 
-    def modify_reward(self, reward, pos):
+    def modify_reward(self, reward, pos, level):
         if pos in self.prev_poses:
-            reward -= 0.5
+            reward -= 1
+        if self.prev_discovered:
+            reward += 5
+            self.prev_discovered = False
+        if self.prev_level is not None and level is not None:
+            reward += 50 * (level - self.prev_level)
         return reward - 0.1
 
     def choose_action(self, state):
@@ -106,7 +134,9 @@ class QLearningBot:
         if state['message']['is_more']:
             act = action.Action.MORE
         elif state['message']['is_yn']:
-            act = action.Action.YES
+            act = (action.Action.NO if 'Beware' in state['message']['text']
+                   else action.Action.YES)
+
         else:
             if random.random() < self.epsilon:
                 act = random.choice(action.MOVE_ACTIONS)
@@ -123,15 +153,17 @@ class QLearningBot:
                 act = random.choice(best_actions)
         self.prev_state = parsed_state
         self.prev_act = act
-        self.prev_reward = self.modify_reward(state['reward'], pos)
+        level = state['Dlvl'] if 'Dlvl' in state else None
+        self.prev_reward = self.modify_reward(state['reward'], pos, level)
         self.prev_poses.append(pos)
+        self.prev_level = level
         return act
 
     def get_status(self):
         train_string = 'TRAIN' if self.train else 'TEST'
         status = '{}\tEP:{}'.format(train_string, self.epoch)
         if self.prev_state is not None and self.prev_Q is not None:
-            status += '\tQ:{:.3f}\tR:{:.3f}\tST:{:016x}'.format(
+            status += '\tQ:{:.3f}\tR:{:.3f}\n\tST:{:018x}'.format(
                 self.Q[(self.prev_state, self.prev_act.name)],
                 self.prev_reward, self.prev_state)
         status += '\n'

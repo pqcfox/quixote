@@ -3,9 +3,8 @@ import bot
 import display
 import experiment
 
-exp_bot = bot.QLearningBot()
 exp_game = game.Game()
 exp_display = display.Display()
-
+exp_bot = bot.QLearningBot(discount=0.2)
 exp = experiment.Experiment(exp_bot, exp_game, exp_display)
-print([state for state in exp.run(show=True, epochs=10)])
+exp.run(show=True, epochs=50)
