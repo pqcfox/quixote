@@ -32,7 +32,7 @@ class RandomBot:
 class QLearningBot:
     PATTERNS = [string.ascii_letters, '+', '>', '-', '|', ' ', '#']
 
-    def __init__(self, lr=0.4, epsilon=0.1, discount=0.6):
+    def __init__(self, lr=0.3, epsilon=0.1, discount=0.6):
         self.prev_state = None
         self.prev_act = None
         self.prev_reward = None
@@ -107,7 +107,7 @@ class QLearningBot:
     def update_Q(self, parsed_state):
         state_act_pair = (self.prev_state, self.prev_act)
         self.state_act_counts[state_act_pair] += 1
-        state_act_lr = self.lr # / float(self.state_act_counts[state_act_pair])
+        state_act_lr = self.lr / float(self.state_act_counts[state_act_pair])
         if self.prev_state is not None:
             self.prev_Q = self.Q[state_act_pair]
             max_Q = max([self.Q[(parsed_state, act)]
